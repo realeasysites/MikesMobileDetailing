@@ -98,7 +98,7 @@
     lb.hidden = false;
   }
   function open(el) {
-    group = $$('[data-lb]', el.closest('.names, .panel-photos') || document);
+    group = $$('[data-lb]', el.closest('.names, .panel-photos, .lp-media') || document);
     lastFocus = document.activeElement;
     peek && peek.classList.remove('on');
     show(group.indexOf(el));

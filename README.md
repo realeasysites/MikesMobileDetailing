@@ -17,6 +17,13 @@ Open http://localhost:3000 and http://localhost:3000/admin
 4. Environment variables (see `.env.example`): `ADMIN_PASSWORD`, `SESSION_SECRET`, `SITE_URL`, `NOTIFY_EMAIL`, and the `SMTP_*` Gmail app-password settings.
 5. Point Mike's own domain at the service and update `SITE_URL`, `robots.txt` and `sitemap.xml` if it isn't mikesmobiledetailingny.com.
 
+## Latest job section (under the hero)
+- Shows Mike's newest post: caption plus every photo/video in it (photos open full-screen).
+- Mike adds posts himself at `/admin` > **Post your latest job**: pick photos/videos from his phone, paste his Facebook caption, optional Facebook post link. Photos are resized on the phone before upload. Up to 10 items, 80 MB per video.
+- Why not automatic: Mike's Facebook is a personal profile, and Facebook only lets websites pull posts from business Pages. If he moves to a business Page, this can switch to pulling automatically.
+- Uploads are saved next to the database (`/var/data/uploads` on Render, same disk), or set `UPLOAD_DIR`. Deleting a post deletes its files.
+- First boot seeds his real Oct 28 golf-cart post so the section isn't empty; delete it any time.
+
 ## Notes
 - Without SMTP settings the form still saves every request to the dashboard; emails are skipped.
 - `/admin` is password-only. Every request can be status-tracked (new, contacted, booked, done, not a lead), noted, mapped and deleted.

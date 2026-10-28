@@ -27,9 +27,41 @@ main{max-width:1000px;margin:0 auto;padding:18px}
 .acts .del{border-color:#e5322d;color:#c0221d;margin-left:auto}
 textarea{width:100%;margin-top:8px;border:1px solid #ccc;border-radius:8px;padding:8px;font:inherit;font-size:14px}
 .empty{text-align:center;color:#777;padding:40px}
+
+.post-box{background:#fff;border-radius:12px;padding:16px;margin-bottom:22px;border:2px solid #0d0f12}
+.post-box h2{margin:0 0 4px;font-size:18px}.post-box .sub{margin:0 0 12px;color:#666;font-size:14px}
+.pick{display:flex;align-items:center;justify-content:center;gap:10px;border:2px dashed #9aa6b2;border-radius:10px;padding:18px;font-weight:700;cursor:pointer;background:#f6f8fa;font-size:16px}
+.pick input{display:none}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;margin:10px 0}
+.thumbs div{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111}
+.thumbs img,.thumbs video{width:100%;height:100%;object-fit:cover}
+.thumbs button{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.7);color:#fff;font-weight:700;cursor:pointer;line-height:1}
+.post-box textarea,.post-box input[type=url]{width:100%;margin-top:8px;border:1px solid #ccc;border-radius:8px;padding:10px;font:inherit;font-size:15px}
+.post-go{margin-top:10px;width:100%;padding:13px;border:0;border-radius:10px;background:#1f6fff;color:#fff;font-weight:800;font-size:16px;cursor:pointer}
+.post-go:disabled{opacity:.6}
+.post-msg{min-height:1.3em;margin:8px 0 0;font-weight:600;font-size:14px}.post-msg.err{color:#c0221d}.post-msg.ok{color:#1a9c4b}
+.past{margin-top:14px;border-top:1px solid #eee;padding-top:10px}
+.past h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#666}
+.past-row{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px}
+.past-row img,.past-row video{width:52px;height:52px;object-fit:cover;border-radius:6px;background:#111;flex:none}
+.past-row p{margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.past-row small{color:#888;display:block}
+.past-row .live{background:#e6f7ec;color:#1a7a3d;font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;margin-left:6px}
+.past-row button{border:1px solid #e5322d;color:#c0221d;background:#fff;border-radius:8px;padding:6px 10px;font-weight:600;cursor:pointer}
 </style></head><body>
 <header><img src="/img/logo-white.png" alt="Mike's Mobile Detailing"><h1>Bookings</h1><a href="/" target="_blank">View site</a><a href="/admin/logout">Sign out</a></header>
 <main>
+<section class="post-box" id="postBox">
+<h2>Post your latest job</h2>
+<p class="sub">Just posted on Facebook? Drop the same photos and caption here. The newest post shows right under the top of your website.</p>
+<label class="pick">+ Add photos or videos<input type="file" id="pfiles" accept="image/*,video/mp4,video/quicktime,video/webm" multiple></label>
+<div class="thumbs" id="pthumbs"></div>
+<textarea id="pcap" rows="3" maxlength="2000" placeholder="Caption (paste the one from your Facebook post)"></textarea>
+<input type="url" id="pfb" placeholder="Facebook post link (optional, tap Share > Copy link)">
+<button class="post-go" id="pgo" type="button">Post to website</button>
+<p class="post-msg" id="pmsg" role="status"></p>
+<div class="past" id="past"></div>
+</section>
 <div class="tabs" id="tabs"><button data-d="d7" class="on">7 days</button><button data-d="d30">30 days</button><button data-d="d90">90 days</button></div>
 <div class="stats" id="stats"></div>
 <div class="panels" id="panels"></div>
@@ -69,4 +101,40 @@ box.addEventListener('change',function(e){if(e.target.getAttribute('data-act')==
 box.addEventListener('focusout',function(e){if(e.target.getAttribute('data-act')==='notes'){var id=idOf(e.target);patch(id,{notes:e.target.value});LEADS.forEach(function(l){if(String(l.id)===id)l.notes=e.target.value})}});
 box.addEventListener('click',function(e){if(e.target.getAttribute('data-act')==='del'){var id=idOf(e.target);if(!confirm('Delete this request permanently? This cannot be undone.'))return;api('/leads/'+id,{method:'DELETE'}).then(function(){LEADS=LEADS.filter(function(l){return String(l.id)!==id});renderLeads()})}});
 load();
+
+/* ---------- Latest job posts ---------- */
+var PFILES=[];
+function pmsg(c,t){var m=document.getElementById('pmsg');m.className='post-msg '+c;m.textContent=t}
+function shrink(file){ // resize photos on the phone before upload (fast uploads, no giant iPhone files)
+  if(!/^image\/(jpeg|png|webp|heic|heif)/.test(file.type)&&!/\.(heic|heif)$/i.test(file.name))return Promise.resolve({blob:file,w:0,h:0,name:file.name});
+  return new Promise(function(res){var u=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){var s=Math.min(1,1800/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');
+      c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);
+      c.toBlob(function(b){res({blob:b||file,w:c.width,h:c.height,name:file.name.replace(/\.\w+$/,'')+'.jpg'})},'image/jpeg',0.85)};
+    im.onerror=function(){URL.revokeObjectURL(u);res({blob:file,w:0,h:0,name:file.name})};im.src=u})}
+function drawThumbs(){document.getElementById('pthumbs').innerHTML=PFILES.map(function(f,i){var u=URL.createObjectURL(f);
+  return'<div>'+(/^video/.test(f.type)?'<video src="'+u+'" muted></video>':'<img src="'+u+'" alt="">')+'<button type="button" data-rm="'+i+'" aria-label="Remove">×</button></div>'}).join('')}
+document.getElementById('pfiles').addEventListener('change',function(){PFILES=PFILES.concat([].slice.call(this.files)).slice(0,10);this.value='';drawThumbs()});
+document.getElementById('pthumbs').addEventListener('click',function(e){var i=e.target.getAttribute('data-rm');if(i!==null){PFILES.splice(+i,1);drawThumbs()}});
+document.getElementById('pgo').addEventListener('click',function(){
+  var btn=this;if(!PFILES.length){pmsg('err','Add at least one photo or video.');return}
+  btn.disabled=true;pmsg('','Getting photos ready...');
+  Promise.all(PFILES.map(shrink)).then(function(list){
+    var fd=new FormData();fd.append('caption',document.getElementById('pcap').value);fd.append('fb_url',document.getElementById('pfb').value);
+    fd.append('dims',JSON.stringify(list.map(function(x){return[x.w,x.h]})));list.forEach(function(x){fd.append('media',x.blob,x.name)});
+    var x=new XMLHttpRequest();x.open('POST','/admin/api/posts');
+    x.upload.onprogress=function(e){if(e.lengthComputable)pmsg('','Uploading... '+Math.round(e.loaded/e.total*100)+'%')};
+    x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(e){}
+      if(x.status===401){location.reload();return}
+      if(x.status===200&&j.ok){PFILES=[];drawThumbs();document.getElementById('pcap').value='';document.getElementById('pfb').value='';pmsg('ok','Posted! It’s live on your website now.');loadPosts()}
+      else pmsg('err',j.error||'Upload failed. Try again.');btn.disabled=false};
+    x.onerror=function(){pmsg('err','Upload failed. Check your connection and try again.');btn.disabled=false};x.send(fd)})});
+function loadPosts(){api('/posts').then(function(d){var p=d.posts||[];
+  document.getElementById('past').innerHTML=p.length?'<h3>Your posts</h3>'+p.map(function(x,i){var m=x.media[0]||{};
+    return'<div class="past-row">'+(m.type==='video'?'<video src="'+esc(m.url)+'" muted></video>':'<img src="'+esc(m.url)+'" alt="">')
+    +'<p>'+esc((x.caption||'(no caption)').split('\n')[0])+(i===0?'<span class="live">LIVE</span>':'')+'<small>'+x.media.length+' item'+(x.media.length===1?'':'s')+' · '+esc(String(x.created_at).slice(0,10))+'</small></p>'
+    +'<button type="button" data-pdel="'+x.id+'">Delete</button></div>'}).join(''):''})}
+document.getElementById('past').addEventListener('click',function(e){var id=e.target.getAttribute('data-pdel');if(!id)return;
+  if(!confirm('Delete this post from your website?'))return;api('/posts/'+id,{method:'DELETE'}).then(loadPosts)});
+loadPosts();
 </script></body></html>

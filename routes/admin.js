@@ -48,6 +48,7 @@ router.get('/admin/logout', (req, res) => {
 
 const api = express.Router();
 api.use(auth.requireAdminApi);
+api.use(require('./posts')); // "Latest job" posts (auth is checked above, before any upload is accepted)
 
 api.get('/leads', (req, res) => {
   res.json({ statuses: STATUSES, leads: db.prepare('SELECT * FROM leads ORDER BY id DESC LIMIT 1000').all() });

@@ -26,14 +26,18 @@ app.use(adminRoutes);
 app.use(express.json({ limit: '32kb' }));
 app.use(publicRoutes);
 
-// Home page: fill in the live domain for canonical/OG tags
+// Home page: fill in the live domain for canonical/OG tags, plus Mike's latest job post
 const fs = require('fs');
+const posts = require('./lib/posts');
 const SITE_URL = (process.env.SITE_URL || 'https://mikesmobiledetailingny.com').replace(/\/+$/, '');
 const homeHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8').replace(/%%SITE_URL%%/g, SITE_URL);
 app.get(['/', '/index.html'], (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=300');
-  res.type('html').send(homeHtml);
+  res.setHeader('Cache-Control', 'public, max-age=60');
+  res.type('html').send(homeHtml.replace('<!--LATEST_POST-->', posts.renderLatest()));
 });
+
+// Photos and videos Mike posts from the dashboard
+app.use('/uploads', express.static(posts.UPLOAD_DIR, { maxAge: '30d', immutable: true, index: false }));
 
 app.use(
   express.static(path.join(__dirname, 'public'), {
